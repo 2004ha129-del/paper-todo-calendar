@@ -10,7 +10,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-/* ───── Reset & Base ───── */
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --primary:#1a73e8;--primary-dark:#1557b0;--danger:#ea4335;
@@ -27,17 +26,15 @@
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;
   background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;
-  -webkit-tap-highlight-color:transparent;
-  overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;
 }
 button{font-family:inherit;cursor:pointer;border:none;background:none}
-input,select,textarea{font-family:inherit;font-size:15px}
+input,select,textarea{font-family:inherit;font-size:14px}
+textarea{resize:vertical}
 
-/* ───── Screens ───── */
 .screen{display:none;min-height:100vh;min-height:100dvh;padding-bottom:100px}
 .screen.active{display:block}
 
-/* ───── Header ───── */
 .header{
   background:var(--surface);border-bottom:1px solid var(--border);
   padding:12px 16px;display:flex;align-items:center;gap:12px;
@@ -46,12 +43,10 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .header h1{font-size:18px;font-weight:700;flex:1}
 .header-btn{
   width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:20px;color:var(--text2);
-  transition:background .15s;
+  justify-content:center;font-size:20px;color:var(--text2);transition:background .15s;
 }
 .header-btn:hover{background:var(--border)}
 
-/* ───── Home Screen ───── */
 .home-hero{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:60px 24px 40px;text-align:center;
@@ -79,32 +74,25 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .action-card .label{font-weight:600;font-size:15px}
 .action-card .desc{font-size:12px;color:var(--text2);margin-top:2px}
 
-/* ───── FAB (Camera) ───── */
 .fab{
   position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
   width:64px;height:64px;border-radius:50%;background:var(--primary);
   color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 12px rgba(26,115,232,.4);z-index:200;
-  transition:transform .15s,box-shadow .15s;
+  box-shadow:0 4px 12px rgba(26,115,232,.4);z-index:200;transition:transform .15s;
 }
 .fab:active{transform:translateX(-50%) scale(.92)}
 #cameraInput{display:none}
 
-/* ───── Analyzing Overlay ───── */
 .overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;
   display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
 }
 .overlay.active{display:flex}
 .overlay .preview{max-width:80vw;max-height:40vh;border-radius:var(--radius);object-fit:contain}
-.spinner{
-  width:40px;height:40px;border:4px solid rgba(255,255,255,.3);
-  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;
-}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .overlay p{color:#fff;font-size:15px;font-weight:500}
 
-/* ───── Results Screen ───── */
 .results-summary{
   background:var(--surface);margin:12px 16px;padding:16px;
   border-radius:var(--radius);border:1px solid var(--border);
@@ -114,8 +102,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 
 .item-card{
   background:var(--surface);margin:8px 16px;padding:14px 16px;
-  border-radius:var(--radius);border:1px solid var(--border);
-  box-shadow:var(--shadow);
+  border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);
 }
 .item-card.excluded{opacity:.45}
 .item-top{display:flex;align-items:flex-start;gap:10px}
@@ -127,25 +114,27 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .item-check.checked{background:var(--primary);border-color:var(--primary);color:#fff}
 .item-title{font-weight:600;font-size:15px;flex:1}
 .item-meta{display:flex;gap:8px;margin-top:8px;margin-left:32px;flex-wrap:wrap}
-.badge{
-  font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;
-}
+.badge{font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600}
 .badge-date{background:#e8f0fe;color:#1a73e8}
 .badge-high{background:#fce8e6;color:#ea4335}
 .badge-medium{background:#fef7e0;color:#e37400}
 .badge-low{background:#e6f4ea;color:#34a853}
-.item-desc{font-size:13px;color:var(--text2);margin-top:6px;margin-left:32px}
 .item-reason{font-size:12px;color:var(--text2);margin-top:4px;margin-left:32px;font-style:italic}
-.item-edit-row{
-  display:flex;gap:8px;margin-top:10px;margin-left:32px;flex-wrap:wrap;
-}
-.item-edit-row input,.item-edit-row select{
-  padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+
+.edit-section{margin:10px 0 0 32px;display:flex;flex-direction:column;gap:8px}
+.edit-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.edit-row label{font-size:12px;color:var(--text2);min-width:60px;flex-shrink:0}
+.edit-row input,.edit-row select,.edit-row textarea{
+  flex:1;min-width:0;padding:7px 10px;border:1px solid var(--border);border-radius:8px;
   background:var(--bg);color:var(--text);font-size:13px;
 }
-.item-edit-row input[type="text"]{flex:1;min-width:120px}
-.item-edit-row input[type="date"]{width:140px}
-.item-edit-row input[type="time"]{width:110px}
+.edit-row input[type="date"]{max-width:150px}
+.edit-row input[type="time"]{max-width:120px}
+.edit-row textarea{min-height:36px;line-height:1.4}
+.edit-toggle{
+  font-size:12px;color:var(--primary);cursor:pointer;margin-left:32px;margin-top:4px;
+  display:inline-block;
+}
 
 @media(prefers-color-scheme:dark){
   .badge-date{background:#1a3a5c;color:#8ab4f8}
@@ -154,7 +143,6 @@ input,select,textarea{font-family:inherit;font-size:15px}
   .badge-low{background:#1c3a2a;color:#81c995}
 }
 
-/* ───── Bottom Actions ───── */
 .bottom-bar{
   position:fixed;bottom:0;left:0;right:0;
   background:var(--surface);border-top:1px solid var(--border);
@@ -169,7 +157,6 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .btn-secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
 .btn:disabled{opacity:.4;pointer-events:none}
 
-/* ───── Settings Screen ───── */
 .settings-section{
   background:var(--surface);margin:12px 16px;padding:16px;
   border-radius:var(--radius);border:1px solid var(--border);
@@ -189,18 +176,18 @@ input,select,textarea{font-family:inherit;font-size:15px}
   color:#fff;font-size:15px;font-weight:600;text-align:center;
 }
 
-/* ───── History Screen ───── */
 .history-item{
   background:var(--surface);margin:8px 16px;padding:14px 16px;
-  border-radius:var(--radius);border:1px solid var(--border);
+  border-radius:var(--radius);border:1px solid var(--border);cursor:pointer;
 }
+.history-item:active{opacity:.8}
 .history-item .date{font-size:12px;color:var(--text2)}
 .history-item .summary{font-size:14px;margin-top:4px}
 .history-item .count{font-size:12px;color:var(--primary);margin-top:4px;font-weight:600}
+.history-photo{width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:8px}
 .empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
 .empty-state .icon{font-size:48px;margin-bottom:12px}
 
-/* ───── Calendar Picker ───── */
 .cal-picker{
   background:var(--surface);margin:12px 16px;padding:14px 16px;
   border-radius:var(--radius);border:1px solid var(--border);
@@ -211,7 +198,6 @@ input,select,textarea{font-family:inherit;font-size:15px}
   border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;
 }
 
-/* ───── Toast ───── */
 .toast{
   position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
   background:#323232;color:#fff;padding:12px 20px;border-radius:8px;
@@ -221,7 +207,6 @@ input,select,textarea{font-family:inherit;font-size:15px}
 }
 .toast.show{opacity:1}
 
-/* ───── Success Screen ───── */
 .success-content{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:80px 24px;text-align:center;
@@ -231,9 +216,14 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .success-content p{color:var(--text2);font-size:14px;max-width:300px;margin-bottom:24px}
 .success-content .btn-open-gcal{
   display:inline-block;padding:12px 24px;border-radius:10px;
-  background:var(--primary);color:#fff;font-size:15px;font-weight:600;
-  text-decoration:none;
+  background:var(--primary);color:#fff;font-size:15px;font-weight:600;text-decoration:none;
 }
+
+.detail-screen-photo{width:100%;max-height:40vh;object-fit:contain;background:#000;border-radius:0 0 12px 12px}
+.detail-items{padding:8px 0}
+.detail-item{background:var(--surface);margin:8px 16px;padding:12px;border-radius:var(--radius);border:1px solid var(--border)}
+.detail-item h4{font-size:14px;margin-bottom:4px}
+.detail-item p{font-size:13px;color:var(--text2)}
 </style>
 </head>
 <body>
@@ -258,17 +248,11 @@ input,select,textarea{font-family:inherit;font-size:15px}
   <div class="home-actions">
     <button class="action-card" onclick="triggerCamera()">
       <div class="icon">📸</div>
-      <div>
-        <div class="label">カメラで撮影</div>
-        <div class="desc">紙を撮影してAIが内容を解析</div>
-      </div>
+      <div><div class="label">カメラで撮影</div><div class="desc">紙を撮影してAIが内容を解析</div></div>
     </button>
     <button class="action-card" id="btnGoogleSignIn" onclick="handleGoogleSignIn()">
       <div class="icon">🔑</div>
-      <div>
-        <div class="label" id="signInLabel">Googleアカウントでログイン</div>
-        <div class="desc" id="signInDesc">カレンダーへの追加に必要です</div>
-      </div>
+      <div><div class="label" id="signInLabel">Googleアカウントでログイン</div><div class="desc" id="signInDesc">カレンダーへの追加に必要です</div></div>
     </button>
   </div>
   <button class="fab" onclick="triggerCamera()" title="撮影">📷</button>
@@ -302,9 +286,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 
 <!-- ===== SUCCESS ===== -->
 <div id="screenSuccess" class="screen">
-  <div class="header">
-    <h1>完了</h1>
-  </div>
+  <div class="header"><h1>完了</h1></div>
   <div class="success-content">
     <div class="check-icon">✅</div>
     <h2>カレンダーに追加しました</h2>
@@ -357,12 +339,18 @@ input,select,textarea{font-family:inherit;font-size:15px}
   <div id="historyList"></div>
 </div>
 
-<!-- ===== TOAST ===== -->
+<!-- ===== HISTORY DETAIL ===== -->
+<div id="screenHistoryDetail" class="screen">
+  <div class="header">
+    <button class="header-btn" onclick="showScreen('screenHistory')">←</button>
+    <h1>読み取り詳細</h1>
+  </div>
+  <div id="historyDetailContent"></div>
+</div>
+
 <div id="toast" class="toast"></div>
 
-<!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- Google API Client -->
 <script src="https://apis.google.com/js/api.js" async defer></script>
 
 <script>
@@ -371,7 +359,63 @@ let gTokenClient = null;
 let gAccessToken = null;
 let gUserInfo = null;
 let currentItems = [];
+let currentPhotoBase64 = null;
+let currentSummary = '';
 let calendarList = [];
+
+// ─── IndexedDB ───
+const DB_NAME = 'PaperCalDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'scans';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveScan(photoBase64, summary, items) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).add({
+      date: new Date().toISOString(),
+      photo: photoBase64,
+      summary: summary,
+      items: items,
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getAllScans() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result.reverse());
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getScan(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
 // ─── Screen Navigation ───
 function showScreen(id) {
@@ -380,7 +424,6 @@ function showScreen(id) {
   if (id === 'screenHistory') renderHistory();
 }
 
-// ─── Toast ───
 function toast(msg, ms = 3000) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -390,13 +433,9 @@ function toast(msg, ms = 3000) {
 
 // ─── Settings ───
 function loadSettings() {
-  const k = localStorage.getItem('ptc_openai_key') || '';
-  const m = localStorage.getItem('ptc_model') || 'gpt-4o';
-  const g = localStorage.getItem('ptc_google_client_id') || '';
-  document.getElementById('settingOpenaiKey').value = k;
-  document.getElementById('settingModel').value = m;
-  document.getElementById('settingGoogleClientId').value = g;
-  return { openaiKey: k, model: m, googleClientId: g };
+  document.getElementById('settingOpenaiKey').value = localStorage.getItem('ptc_openai_key') || '';
+  document.getElementById('settingModel').value = localStorage.getItem('ptc_model') || 'gpt-4o';
+  document.getElementById('settingGoogleClientId').value = localStorage.getItem('ptc_google_client_id') || '';
 }
 
 function saveSettings() {
@@ -420,15 +459,11 @@ function getSettings() {
 function initGoogleAuth() {
   const { googleClientId } = getSettings();
   if (!googleClientId) return;
-
   gTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: googleClientId,
     scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.profile',
     callback: (resp) => {
-      if (resp.error) {
-        toast('Google認証に失敗しました: ' + resp.error);
-        return;
-      }
+      if (resp.error) { toast('Google認証に失敗しました: ' + resp.error); return; }
       gAccessToken = resp.access_token;
       fetchUserInfo();
       fetchCalendarList();
@@ -439,32 +474,21 @@ function initGoogleAuth() {
 
 function handleGoogleSignIn() {
   const { googleClientId } = getSettings();
-  if (!googleClientId) {
-    toast('先に設定画面でGoogle クライアントIDを入力してください');
-    showScreen('screenSettings');
-    return;
-  }
+  if (!googleClientId) { toast('先に設定画面でGoogle クライアントIDを入力してください'); showScreen('screenSettings'); return; }
   if (!gTokenClient) initGoogleAuth();
-  if (gTokenClient) {
-    gTokenClient.requestAccessToken();
-  }
+  if (gTokenClient) gTokenClient.requestAccessToken();
 }
 
 function handleSignOut() {
-  if (gAccessToken) {
-    google.accounts.oauth2.revoke(gAccessToken);
-  }
-  gAccessToken = null;
-  gUserInfo = null;
+  if (gAccessToken) google.accounts.oauth2.revoke(gAccessToken);
+  gAccessToken = null; gUserInfo = null;
   updateUserBadge();
   toast('ログアウトしました');
 }
 
 async function fetchUserInfo() {
   try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: 'Bearer ' + gAccessToken }
-    });
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: 'Bearer ' + gAccessToken } });
     gUserInfo = await res.json();
     updateUserBadge();
   } catch (e) { console.error(e); }
@@ -472,7 +496,6 @@ async function fetchUserInfo() {
 
 function updateUserBadge() {
   const badge = document.getElementById('userBadge');
-  const btn = document.getElementById('btnGoogleSignIn');
   if (gUserInfo && gAccessToken) {
     badge.style.display = 'inline-flex';
     document.getElementById('userAvatar').src = gUserInfo.picture || '';
@@ -489,9 +512,7 @@ function updateUserBadge() {
 async function fetchCalendarList() {
   if (!gAccessToken) return;
   try {
-    const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-      headers: { Authorization: 'Bearer ' + gAccessToken }
-    });
+    const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', { headers: { Authorization: 'Bearer ' + gAccessToken } });
     const data = await res.json();
     calendarList = (data.items || []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer');
     renderCalendarPicker();
@@ -513,11 +534,7 @@ function renderCalendarPicker() {
 // ─── Camera ───
 function triggerCamera() {
   const { openaiKey } = getSettings();
-  if (!openaiKey) {
-    toast('先に設定画面でOpenAI APIキーを入力してください');
-    showScreen('screenSettings');
-    return;
-  }
+  if (!openaiKey) { toast('先に設定画面でOpenAI APIキーを入力してください'); showScreen('screenSettings'); return; }
   document.getElementById('cameraInput').click();
 }
 
@@ -525,14 +542,14 @@ async function handleImageSelected(e) {
   const file = e.target.files[0];
   if (!file) return;
   e.target.value = '';
-
   const base64 = await fileToBase64(file);
+  currentPhotoBase64 = base64;
   document.getElementById('previewImg').src = base64;
   document.getElementById('overlayAnalyzing').classList.add('active');
-
   try {
     const result = await analyzeImage(base64);
     currentItems = result.items || [];
+    currentSummary = result.summary || '';
     renderResults(result);
     showScreen('screenResults');
     if (gAccessToken && calendarList.length === 0) fetchCalendarList();
@@ -566,10 +583,15 @@ async function analyzeImage(base64DataUrl) {
     {
       "title": "タスク名（簡潔に）",
       "date": "YYYY-MM-DD（不明ならnull）",
-      "time": "HH:MM（不明ならnull）",
-      "duration_minutes": 60,
-      "description": "詳細・補足",
+      "start_time": "HH:MM（不明ならnull）",
+      "end_time": "HH:MM（不明ならnull）",
+      "location": "場所（不明ならnull）",
+      "dress_code": "服装の指定（不明ならnull）",
+      "items_to_bring": "持ち物（不明ならnull）",
+      "notes": "注意事項・補足（不明ならnull）",
+      "description": "その他の詳細",
       "priority": "high / medium / low",
+      "recurrence": "none / daily / weekly / monthly / yearly",
       "should_add": true,
       "reason": "追加すべき理由、または追加不要の理由"
     }
@@ -584,28 +606,30 @@ async function analyzeImage(base64DataUrl) {
 - メモ書き・参考情報・落書き → should_add: false
 - 日付が書かれていなくても、タスクとして成立するなら should_add: true（dateはnull）
 
+読み取りのポイント:
+- 場所（会議室名・住所・建物名など）があれば必ず location に入れる
+- 「服装」「ドレスコード」「スーツ」「私服OK」などがあれば dress_code に入れる
+- 「持ち物」「持参」「用意するもの」があれば items_to_bring に入れる
+- 「注意」「備考」「連絡事項」があれば notes に入れる
+- 開始時間と終了時間が両方あれば両方入れる。片方しかなければ start_time のみ
+- 「毎週」「毎月」「毎日」「定例」などの繰り返し表現があれば recurrence に反映
+
 今日の日付: ${new Date().toISOString().split('T')[0]}
 年が書かれていない場合は今年（${new Date().getFullYear()}年）として解釈してください。`;
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + openaiKey,
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + openaiKey },
     body: JSON.stringify({
       model: model,
       messages: [
         { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'この紙の内容を読み取って、TODO・スケジュールを抽出してください。' },
-            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } }
-          ]
-        }
+        { role: 'user', content: [
+          { type: 'text', text: 'この紙の内容を読み取って、TODO・スケジュールを抽出してください。' },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } }
+        ]}
       ],
-      max_tokens: 2000,
+      max_tokens: 3000,
       temperature: 0.1,
     }),
   });
@@ -623,7 +647,6 @@ async function analyzeImage(base64DataUrl) {
 
   const data = await res.json();
   const content = data.choices[0].message.content;
-
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('AIからのレスポンスをパースできませんでした');
   return JSON.parse(jsonMatch[0]);
@@ -631,48 +654,113 @@ async function analyzeImage(base64DataUrl) {
 
 // ─── Render Results ───
 function renderResults(result) {
-  const summary = document.getElementById('resultsSummary');
-  summary.innerHTML = `
+  document.getElementById('resultsSummary').innerHTML = `
     <h3>📝 読み取り結果</h3>
-    <p>${escapeHtml(result.summary || '')}</p>
+    <p>${esc(result.summary || '')}</p>
   `;
-
   const container = document.getElementById('resultsItems');
   container.innerHTML = '';
 
   currentItems.forEach((item, i) => {
     item._checked = item.should_add;
+    item.recurrence = item.recurrence || 'none';
     const card = document.createElement('div');
     card.className = 'item-card' + (item.should_add ? '' : ' excluded');
     card.id = 'item-' + i;
-    card.innerHTML = `
-      <div class="item-top">
-        <div class="item-check ${item.should_add ? 'checked' : ''}" onclick="toggleItem(${i})">✓</div>
-        <div class="item-title">${escapeHtml(item.title)}</div>
-      </div>
-      <div class="item-meta">
-        ${item.date ? `<span class="badge badge-date">📅 ${item.date}${item.time ? ' ' + item.time : ''}</span>` : '<span class="badge badge-date">📅 日付なし</span>'}
-        <span class="badge badge-${item.priority}">${{high:'🔴 高',medium:'🟡 中',low:'🟢 低'}[item.priority] || '中'}</span>
-      </div>
-      ${item.description ? `<div class="item-desc">${escapeHtml(item.description)}</div>` : ''}
-      <div class="item-reason">${item.should_add ? '✅' : '⏭️'} ${escapeHtml(item.reason || '')}</div>
-      <div class="item-edit-row">
-        <input type="text" value="${escapeAttr(item.title)}" onchange="currentItems[${i}].title=this.value" placeholder="タイトル">
-        <input type="date" value="${item.date || ''}" onchange="currentItems[${i}].date=this.value">
-        <input type="time" value="${item.time || ''}" onchange="currentItems[${i}].time=this.value">
-      </div>
-    `;
+    card.innerHTML = buildItemCardHTML(item, i);
     container.appendChild(card);
   });
-
   updateAddButton();
+}
+
+function buildItemCardHTML(item, i) {
+  const priorityLabels = {high:'🔴 高',medium:'🟡 中',low:'🟢 低'};
+  const recLabels = {none:'なし',daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年'};
+  const timeStr = item.start_time ? (item.end_time ? `${item.start_time}〜${item.end_time}` : item.start_time) : '';
+
+  return `
+    <div class="item-top">
+      <div class="item-check ${item._checked ? 'checked' : ''}" onclick="toggleItem(${i})">✓</div>
+      <div class="item-title">${esc(item.title)}</div>
+    </div>
+    <div class="item-meta">
+      ${item.date ? `<span class="badge badge-date">📅 ${item.date} ${timeStr}</span>` : '<span class="badge badge-date">📅 日付なし</span>'}
+      <span class="badge badge-${item.priority}">${priorityLabels[item.priority] || '🟡 中'}</span>
+      ${item.recurrence && item.recurrence !== 'none' ? `<span class="badge badge-date">🔁 ${recLabels[item.recurrence]}</span>` : ''}
+    </div>
+    ${item.location ? `<div style="font-size:13px;margin:4px 0 0 32px">📍 ${esc(item.location)}</div>` : ''}
+    ${item.dress_code ? `<div style="font-size:13px;margin:2px 0 0 32px">👔 ${esc(item.dress_code)}</div>` : ''}
+    ${item.items_to_bring ? `<div style="font-size:13px;margin:2px 0 0 32px">🎒 ${esc(item.items_to_bring)}</div>` : ''}
+    ${item.notes ? `<div style="font-size:13px;margin:2px 0 0 32px">⚠️ ${esc(item.notes)}</div>` : ''}
+    ${item.description ? `<div style="font-size:13px;color:var(--text2);margin:4px 0 0 32px">${esc(item.description)}</div>` : ''}
+    <div class="item-reason">${item.should_add ? '✅' : '⏭️'} ${esc(item.reason || '')}</div>
+    <span class="edit-toggle" onclick="toggleEdit(${i})">✏️ 編集</span>
+    <div class="edit-section" id="edit-${i}" style="display:none">
+      <div class="edit-row">
+        <label>タイトル</label>
+        <input type="text" value="${escA(item.title)}" onchange="currentItems[${i}].title=this.value">
+      </div>
+      <div class="edit-row">
+        <label>日付</label>
+        <input type="date" value="${item.date||''}" onchange="currentItems[${i}].date=this.value">
+      </div>
+      <div class="edit-row">
+        <label>開始</label>
+        <input type="time" value="${item.start_time||''}" onchange="currentItems[${i}].start_time=this.value">
+        <label>終了</label>
+        <input type="time" value="${item.end_time||''}" onchange="currentItems[${i}].end_time=this.value">
+      </div>
+      <div class="edit-row">
+        <label>場所</label>
+        <input type="text" value="${escA(item.location)}" onchange="currentItems[${i}].location=this.value" placeholder="例: 本社3F会議室A">
+      </div>
+      <div class="edit-row">
+        <label>服装</label>
+        <input type="text" value="${escA(item.dress_code)}" onchange="currentItems[${i}].dress_code=this.value" placeholder="例: スーツ着用">
+      </div>
+      <div class="edit-row">
+        <label>持ち物</label>
+        <input type="text" value="${escA(item.items_to_bring)}" onchange="currentItems[${i}].items_to_bring=this.value" placeholder="例: ノートPC, 名刺">
+      </div>
+      <div class="edit-row">
+        <label>注意事項</label>
+        <textarea onchange="currentItems[${i}].notes=this.value" placeholder="例: 駐車場なし。公共交通機関を利用">${esc(item.notes||'')}</textarea>
+      </div>
+      <div class="edit-row">
+        <label>詳細</label>
+        <textarea onchange="currentItems[${i}].description=this.value">${esc(item.description||'')}</textarea>
+      </div>
+      <div class="edit-row">
+        <label>優先度</label>
+        <select onchange="currentItems[${i}].priority=this.value">
+          <option value="high" ${item.priority==='high'?'selected':''}>🔴 高</option>
+          <option value="medium" ${item.priority==='medium'?'selected':''}>🟡 中</option>
+          <option value="low" ${item.priority==='low'?'selected':''}>🟢 低</option>
+        </select>
+      </div>
+      <div class="edit-row">
+        <label>繰り返し</label>
+        <select onchange="currentItems[${i}].recurrence=this.value">
+          <option value="none" ${item.recurrence==='none'?'selected':''}>なし</option>
+          <option value="daily" ${item.recurrence==='daily'?'selected':''}>毎日</option>
+          <option value="weekly" ${item.recurrence==='weekly'?'selected':''}>毎週</option>
+          <option value="monthly" ${item.recurrence==='monthly'?'selected':''}>毎月</option>
+          <option value="yearly" ${item.recurrence==='yearly'?'selected':''}>毎年</option>
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function toggleEdit(i) {
+  const el = document.getElementById('edit-' + i);
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
 }
 
 function toggleItem(i) {
   currentItems[i]._checked = !currentItems[i]._checked;
   const card = document.getElementById('item-' + i);
-  const check = card.querySelector('.item-check');
-  check.classList.toggle('checked');
+  card.querySelector('.item-check').classList.toggle('checked');
   card.classList.toggle('excluded');
   updateAddButton();
 }
@@ -686,12 +774,7 @@ function updateAddButton() {
 
 // ─── Add to Google Calendar ───
 async function addToCalendar() {
-  if (!gAccessToken) {
-    toast('先にGoogleアカウントでログインしてください');
-    handleGoogleSignIn();
-    return;
-  }
-
+  if (!gAccessToken) { toast('先にGoogleアカウントでログインしてください'); handleGoogleSignIn(); return; }
   const calendarId = document.getElementById('calendarSelect').value || 'primary';
   const selected = currentItems.filter(it => it._checked);
   if (selected.length === 0) return;
@@ -701,56 +784,49 @@ async function addToCalendar() {
   btn.textContent = '追加中...';
 
   const colorMap = { high: '11', medium: '5', low: '2' };
-
   let successCount = 0;
   for (const item of selected) {
     try {
       const event = buildCalendarEvent(item, colorMap);
       const res = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + gAccessToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(event),
-        }
+        { method: 'POST', headers: { 'Authorization': 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' }, body: JSON.stringify(event) }
       );
       if (res.ok) successCount++;
       else console.error('Calendar API error:', await res.text());
-    } catch (e) {
-      console.error('Failed to add event:', e);
-    }
+    } catch (e) { console.error('Failed to add event:', e); }
   }
 
-  saveHistory(selected);
+  await saveScan(currentPhotoBase64, currentSummary, selected);
 
-  document.getElementById('successMsg').textContent =
-    `${successCount}件のイベントをGoogleカレンダーに追加しました`;
+  document.getElementById('successMsg').textContent = `${successCount}件のイベントをGoogleカレンダーに追加しました`;
   showScreen('screenSuccess');
 }
 
 function buildCalendarEvent(item, colorMap) {
+  const descParts = [];
+  if (item.dress_code) descParts.push(`👔 服装: ${item.dress_code}`);
+  if (item.items_to_bring) descParts.push(`🎒 持ち物: ${item.items_to_bring}`);
+  if (item.notes) descParts.push(`⚠️ 注意事項: ${item.notes}`);
+  if (item.description) descParts.push(`\n${item.description}`);
+
   const event = {
     summary: item.title,
-    description: item.description || '',
+    description: descParts.join('\n'),
     colorId: colorMap[item.priority] || '0',
   };
 
-  if (item.date && item.time) {
-    const dtStart = `${item.date}T${item.time}:00`;
-    const dur = item.duration_minutes || 60;
-    const startDate = new Date(dtStart);
-    const endDate = new Date(startDate.getTime() + dur * 60000);
-    event.start = {
-      dateTime: startDate.toISOString(),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
-    event.end = {
-      dateTime: endDate.toISOString(),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
+  if (item.location) event.location = item.location;
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (item.date && item.start_time) {
+    event.start = { dateTime: `${item.date}T${item.start_time}:00`, timeZone: tz };
+    if (item.end_time) {
+      event.end = { dateTime: `${item.date}T${item.end_time}:00`, timeZone: tz };
+    } else {
+      const s = new Date(`${item.date}T${item.start_time}:00`);
+      event.end = { dateTime: new Date(s.getTime() + 3600000).toISOString(), timeZone: tz };
+    }
   } else if (item.date) {
     event.start = { date: item.date };
     const next = new Date(item.date);
@@ -764,58 +840,77 @@ function buildCalendarEvent(item, colorMap) {
     event.end = { date: next.toISOString().split('T')[0] };
   }
 
+  if (item.recurrence && item.recurrence !== 'none') {
+    const freqMap = { daily: 'DAILY', weekly: 'WEEKLY', monthly: 'MONTHLY', yearly: 'YEARLY' };
+    event.recurrence = [`RRULE:FREQ=${freqMap[item.recurrence]}`];
+  }
+
   return event;
 }
 
 // ─── History ───
-function saveHistory(items) {
-  const history = JSON.parse(localStorage.getItem('ptc_history') || '[]');
-  history.unshift({
-    date: new Date().toISOString(),
-    count: items.length,
-    summary: items.map(i => i.title).join(', '),
-  });
-  if (history.length > 20) history.length = 20;
-  localStorage.setItem('ptc_history', JSON.stringify(history));
+async function renderHistory() {
+  const container = document.getElementById('historyList');
+  try {
+    const scans = await getAllScans();
+    if (scans.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>まだ読み取り履歴がありません</p></div>';
+      return;
+    }
+    container.innerHTML = scans.map(s => `
+      <div class="history-item" onclick="showHistoryDetail(${s.id})">
+        <div class="date">${new Date(s.date).toLocaleString('ja-JP')}</div>
+        <div class="summary">${esc(s.summary)}</div>
+        <div class="count">${s.items.length}件を登録</div>
+        ${s.photo ? `<img class="history-photo" src="${s.photo}" alt="撮影画像" loading="lazy">` : ''}
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>履歴の読み込みに失敗しました</p></div>';
+  }
 }
 
-function renderHistory() {
-  const container = document.getElementById('historyList');
-  const history = JSON.parse(localStorage.getItem('ptc_history') || '[]');
-  if (history.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>まだ読み取り履歴がありません</p></div>';
-    return;
-  }
-  container.innerHTML = history.map(h => `
-    <div class="history-item">
-      <div class="date">${new Date(h.date).toLocaleString('ja-JP')}</div>
-      <div class="summary">${escapeHtml(h.summary)}</div>
-      <div class="count">${h.count}件を登録</div>
-    </div>
-  `).join('');
+async function showHistoryDetail(id) {
+  try {
+    const scan = await getScan(id);
+    if (!scan) return;
+    const el = document.getElementById('historyDetailContent');
+    const recLabels = {none:'なし',daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年'};
+    el.innerHTML = `
+      ${scan.photo ? `<img class="detail-screen-photo" src="${scan.photo}" alt="撮影画像">` : ''}
+      <div class="results-summary" style="margin:12px 16px">
+        <h3>📝 ${new Date(scan.date).toLocaleString('ja-JP')}</h3>
+        <p>${esc(scan.summary)}</p>
+      </div>
+      <div class="detail-items">
+        ${scan.items.map(it => `
+          <div class="detail-item">
+            <h4>${esc(it.title)}</h4>
+            ${it.date ? `<p>📅 ${it.date}${it.start_time ? ' ' + it.start_time : ''}${it.end_time ? '〜' + it.end_time : ''}</p>` : ''}
+            ${it.location ? `<p>📍 ${esc(it.location)}</p>` : ''}
+            ${it.dress_code ? `<p>👔 ${esc(it.dress_code)}</p>` : ''}
+            ${it.items_to_bring ? `<p>🎒 ${esc(it.items_to_bring)}</p>` : ''}
+            ${it.notes ? `<p>⚠️ ${esc(it.notes)}</p>` : ''}
+            ${it.description ? `<p>${esc(it.description)}</p>` : ''}
+            ${it.recurrence && it.recurrence !== 'none' ? `<p>🔁 ${recLabels[it.recurrence]||''}</p>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    showScreen('screenHistoryDetail');
+  } catch (e) { toast('詳細の読み込みに失敗しました'); }
 }
 
 // ─── Utilities ───
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-function escapeAttr(s) {
-  return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-}
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function escA(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
 // ─── Init ───
 window.addEventListener('DOMContentLoaded', () => {
   loadSettings();
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   const waitForGsi = setInterval(() => {
-    if (typeof google !== 'undefined' && google.accounts) {
-      clearInterval(waitForGsi);
-      initGoogleAuth();
-    }
+    if (typeof google !== 'undefined' && google.accounts) { clearInterval(waitForGsi); initGoogleAuth(); }
   }, 200);
 });
 </script>
