@@ -274,8 +274,10 @@ textarea{resize:vertical}
   </div>
   <div id="resultsSummary" class="results-summary"></div>
   <div id="calPicker" class="cal-picker">
-    <label>登録先カレンダー</label>
-    <select id="calendarSelect"><option value="">読み込み中...</option></select>
+    <label>登録先カレンダー（複数選択可）</label>
+    <div id="calendarCheckboxes" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+      <span style="font-size:13px;color:var(--text2)">読み込み中...</span>
+    </div>
   </div>
   <div id="resultsItems"></div>
   <div class="bottom-bar">
@@ -520,15 +522,25 @@ async function fetchCalendarList() {
 }
 
 function renderCalendarPicker() {
-  const sel = document.getElementById('calendarSelect');
-  sel.innerHTML = '';
+  const container = document.getElementById('calendarCheckboxes');
+  container.innerHTML = '';
   calendarList.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.summary + (c.primary ? ' (メイン)' : '');
-    if (c.primary) opt.selected = true;
-    sel.appendChild(opt);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;padding:6px 0';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = c.id;
+    cb.style.cssText = 'width:18px;height:18px;accent-color:var(--primary)';
+    if (c.primary) cb.checked = true;
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(c.summary + (c.primary ? ' (メイン)' : '')));
+    container.appendChild(label);
   });
+}
+
+function getSelectedCalendarIds() {
+  const checkboxes = document.querySelectorAll('#calendarCheckboxes input[type="checkbox"]:checked');
+  return Array.from(checkboxes).map(cb => cb.value);
 }
 
 // ─── Camera ───
@@ -775,7 +787,8 @@ function updateAddButton() {
 // ─── Add to Google Calendar ───
 async function addToCalendar() {
   if (!gAccessToken) { toast('先にGoogleアカウントでログインしてください'); handleGoogleSignIn(); return; }
-  const calendarId = document.getElementById('calendarSelect').value || 'primary';
+  const calendarIds = getSelectedCalendarIds();
+  if (calendarIds.length === 0) { toast('登録先カレンダーを1つ以上選択してください'); return; }
   const selected = currentItems.filter(it => it._checked);
   if (selected.length === 0) return;
 
@@ -786,20 +799,27 @@ async function addToCalendar() {
   const colorMap = { high: '11', medium: '5', low: '2' };
   let successCount = 0;
   for (const item of selected) {
-    try {
-      const event = buildCalendarEvent(item, colorMap);
-      const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-        { method: 'POST', headers: { 'Authorization': 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' }, body: JSON.stringify(event) }
-      );
-      if (res.ok) successCount++;
-      else console.error('Calendar API error:', await res.text());
-    } catch (e) { console.error('Failed to add event:', e); }
+    const event = buildCalendarEvent(item, colorMap);
+    for (const calId of calendarIds) {
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,
+          { method: 'POST', headers: { 'Authorization': 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' }, body: JSON.stringify(event) }
+        );
+        if (res.ok) successCount++;
+        else console.error('Calendar API error:', await res.text());
+      } catch (e) { console.error('Failed to add event:', e); }
+    }
   }
 
   await saveScan(currentPhotoBase64, currentSummary, selected);
 
-  document.getElementById('successMsg').textContent = `${successCount}件のイベントをGoogleカレンダーに追加しました`;
+  const calCount = calendarIds.length;
+  const itemCount = selected.length;
+  document.getElementById('successMsg').textContent =
+    calCount > 1
+      ? `${itemCount}件のイベントを${calCount}つのカレンダーに追加しました`
+      : `${itemCount}件のイベントをGoogleカレンダーに追加しました`;
   showScreen('screenSuccess');
 }
 
