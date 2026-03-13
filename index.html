@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Paper → Calendar</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a73e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* ───── Reset & Base ───── */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#1a73e8;--primary-dark:#1557b0;--danger:#ea4335;
+  --warn:#fbbc04;--success:#34a853;--bg:#f8f9fa;--surface:#fff;
+  --text:#202124;--text2:#5f6368;--border:#dadce0;--radius:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a2e;--surface:#16213e;--text:#e4e6eb;--text2:#b0b3b8;
+    --border:#3a3b3c;--shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;
+  background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:15px}
+
+/* ───── Screens ───── */
+.screen{display:none;min-height:100vh;min-height:100dvh;padding-bottom:100px}
+.screen.active{display:block}
+
+/* ───── Header ───── */
+.header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:100;
+}
+.header h1{font-size:18px;font-weight:700;flex:1}
+.header-btn{
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:20px;color:var(--text2);
+  transition:background .15s;
+}
+.header-btn:hover{background:var(--border)}
+
+/* ───── Home Screen ───── */
+.home-hero{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 24px 40px;text-align:center;
+}
+.home-hero .app-icon{font-size:64px;margin-bottom:16px}
+.home-hero h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.home-hero p{color:var(--text2);font-size:14px;max-width:320px}
+
+.user-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:24px;
+  padding:6px 14px 6px 6px;margin-top:20px;font-size:13px;
+}
+.user-badge img{width:28px;height:28px;border-radius:50%}
+.user-badge .signout{color:var(--danger);font-size:12px;margin-left:4px;text-decoration:underline;cursor:pointer}
+
+.home-actions{padding:0 20px;display:flex;flex-direction:column;gap:12px;max-width:400px;margin:0 auto}
+.action-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;display:flex;align-items:center;gap:14px;
+  box-shadow:var(--shadow);transition:transform .1s;
+}
+.action-card:active{transform:scale(.98)}
+.action-card .icon{font-size:28px;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.action-card .label{font-weight:600;font-size:15px}
+.action-card .desc{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* ───── FAB (Camera) ───── */
+.fab{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  width:64px;height:64px;border-radius:50%;background:var(--primary);
+  color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(26,115,232,.4);z-index:200;
+  transition:transform .15s,box-shadow .15s;
+}
+.fab:active{transform:translateX(-50%) scale(.92)}
+#cameraInput{display:none}
+
+/* ───── Analyzing Overlay ───── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+.overlay.active{display:flex}
+.overlay .preview{max-width:80vw;max-height:40vh;border-radius:var(--radius);object-fit:contain}
+.spinner{
+  width:40px;height:40px;border:4px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay p{color:#fff;font-size:15px;font-weight:500}
+
+/* ───── Results Screen ───── */
+.results-summary{
+  background:var(--surface);margin:12px 16px;padding:16px;
+  border-radius:var(--radius);border:1px solid var(--border);
+}
+.results-summary h3{font-size:14px;color:var(--text2);margin-bottom:4px}
+.results-summary p{font-size:14px}
+
+.item-card{
+  background:var(--surface);margin:8px 16px;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--border);
+  box-shadow:var(--shadow);
+}
+.item-card.excluded{opacity:.45}
+.item-top{display:flex;align-items:flex-start;gap:10px}
+.item-check{
+  width:22px;height:22px;border-radius:6px;border:2px solid var(--border);
+  flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;font-size:14px;color:transparent;
+}
+.item-check.checked{background:var(--primary);border-color:var(--primary);color:#fff}
+.item-title{font-weight:600;font-size:15px;flex:1}
+.item-meta{display:flex;gap:8px;margin-top:8px;margin-left:32px;flex-wrap:wrap}
+.badge{
+  font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;
+}
+.badge-date{background:#e8f0fe;color:#1a73e8}
+.badge-high{background:#fce8e6;color:#ea4335}
+.badge-medium{background:#fef7e0;color:#e37400}
+.badge-low{background:#e6f4ea;color:#34a853}
+.item-desc{font-size:13px;color:var(--text2);margin-top:6px;margin-left:32px}
+.item-reason{font-size:12px;color:var(--text2);margin-top:4px;margin-left:32px;font-style:italic}
+.item-edit-row{
+  display:flex;gap:8px;margin-top:10px;margin-left:32px;flex-wrap:wrap;
+}
+.item-edit-row input,.item-edit-row select{
+  padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg);color:var(--text);font-size:13px;
+}
+.item-edit-row input[type="text"]{flex:1;min-width:120px}
+.item-edit-row input[type="date"]{width:140px}
+.item-edit-row input[type="time"]{width:110px}
+
+@media(prefers-color-scheme:dark){
+  .badge-date{background:#1a3a5c;color:#8ab4f8}
+  .badge-high{background:#4a1c1c;color:#f28b82}
+  .badge-medium{background:#4a3b1c;color:#fdd663}
+  .badge-low{background:#1c3a2a;color:#81c995}
+}
+
+/* ───── Bottom Actions ───── */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:12px 16px;display:flex;gap:10px;z-index:100;
+}
+.btn{
+  flex:1;padding:12px;border-radius:10px;font-size:15px;font-weight:600;
+  text-align:center;transition:opacity .15s;
+}
+.btn:active{opacity:.7}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn:disabled{opacity:.4;pointer-events:none}
+
+/* ───── Settings Screen ───── */
+.settings-section{
+  background:var(--surface);margin:12px 16px;padding:16px;
+  border-radius:var(--radius);border:1px solid var(--border);
+}
+.settings-section h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2)}
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:13px;font-weight:500;margin-bottom:4px}
+.field input,.field select{
+  width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg);color:var(--text);
+}
+.field .hint{font-size:11px;color:var(--text2);margin-top:4px}
+.save-btn{
+  display:block;width:calc(100% - 32px);margin:16px auto;
+  padding:12px;border-radius:10px;background:var(--primary);
+  color:#fff;font-size:15px;font-weight:600;text-align:center;
+}
+
+/* ───── History Screen ───── */
+.history-item{
+  background:var(--surface);margin:8px 16px;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--border);
+}
+.history-item .date{font-size:12px;color:var(--text2)}
+.history-item .summary{font-size:14px;margin-top:4px}
+.history-item .count{font-size:12px;color:var(--primary);margin-top:4px;font-weight:600}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+
+/* ───── Calendar Picker ───── */
+.cal-picker{
+  background:var(--surface);margin:12px 16px;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--border);
+}
+.cal-picker label{font-size:13px;font-weight:500;display:block;margin-bottom:6px}
+.cal-picker select{
+  width:100%;padding:10px 12px;border:1px solid var(--border);
+  border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;
+}
+
+/* ───── Toast ───── */
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:#323232;color:#fff;padding:10px 20px;border-radius:8px;
+  font-size:14px;z-index:400;opacity:0;transition:opacity .3s;
+  pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1}
+
+/* ───── Success Screen ───── */
+.success-content{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 24px;text-align:center;
+}
+.success-content .check-icon{font-size:64px;margin-bottom:16px}
+.success-content h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.success-content p{color:var(--text2);font-size:14px;max-width:300px;margin-bottom:24px}
+.success-content .btn-open-gcal{
+  display:inline-block;padding:12px 24px;border-radius:10px;
+  background:var(--primary);color:#fff;font-size:15px;font-weight:600;
+  text-decoration:none;
+}
+</style>
+</head>
+<body>
+
+<!-- ===== HOME ===== -->
+<div id="screenHome" class="screen active">
+  <div class="header">
+    <h1>Paper → Calendar</h1>
+    <button class="header-btn" onclick="showScreen('screenHistory')" title="履歴">📋</button>
+    <button class="header-btn" onclick="showScreen('screenSettings')" title="設定">⚙️</button>
+  </div>
+  <div class="home-hero">
+    <div class="app-icon">📷</div>
+    <h2>紙をカレンダーに</h2>
+    <p>紙に書かれたTODOやスケジュールを撮影するだけで、AIが読み取ってGoogleカレンダーに追加します</p>
+    <div id="userBadge" class="user-badge" style="display:none">
+      <img id="userAvatar" src="" alt="">
+      <span id="userName"></span>
+      <span class="signout" onclick="handleSignOut()">ログアウト</span>
+    </div>
+  </div>
+  <div class="home-actions">
+    <button class="action-card" onclick="triggerCamera()">
+      <div class="icon">📸</div>
+      <div>
+        <div class="label">カメラで撮影</div>
+        <div class="desc">紙を撮影してAIが内容を解析</div>
+      </div>
+    </button>
+    <button class="action-card" id="btnGoogleSignIn" onclick="handleGoogleSignIn()">
+      <div class="icon">🔑</div>
+      <div>
+        <div class="label" id="signInLabel">Googleアカウントでログイン</div>
+        <div class="desc" id="signInDesc">カレンダーへの追加に必要です</div>
+      </div>
+    </button>
+  </div>
+  <button class="fab" onclick="triggerCamera()" title="撮影">📷</button>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleImageSelected(event)">
+</div>
+
+<!-- ===== ANALYZING OVERLAY ===== -->
+<div id="overlayAnalyzing" class="overlay">
+  <img id="previewImg" class="preview" src="" alt="撮影画像">
+  <div class="spinner"></div>
+  <p>AIが内容を読み取り中...</p>
+</div>
+
+<!-- ===== RESULTS ===== -->
+<div id="screenResults" class="screen">
+  <div class="header">
+    <button class="header-btn" onclick="showScreen('screenHome')">←</button>
+    <h1>読み取り結果</h1>
+  </div>
+  <div id="resultsSummary" class="results-summary"></div>
+  <div id="calPicker" class="cal-picker">
+    <label>登録先カレンダー</label>
+    <select id="calendarSelect"><option value="">読み込み中...</option></select>
+  </div>
+  <div id="resultsItems"></div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="showScreen('screenHome')">キャンセル</button>
+    <button class="btn btn-primary" id="btnAddToCalendar" onclick="addToCalendar()">カレンダーに追加</button>
+  </div>
+</div>
+
+<!-- ===== SUCCESS ===== -->
+<div id="screenSuccess" class="screen">
+  <div class="header">
+    <h1>完了</h1>
+  </div>
+  <div class="success-content">
+    <div class="check-icon">✅</div>
+    <h2>カレンダーに追加しました</h2>
+    <p id="successMsg"></p>
+    <a class="btn-open-gcal" href="https://calendar.google.com" target="_blank" rel="noopener">Googleカレンダーを開く</a>
+    <br><br>
+    <button class="btn btn-secondary" style="max-width:200px" onclick="showScreen('screenHome')">ホームに戻る</button>
+  </div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div id="screenSettings" class="screen">
+  <div class="header">
+    <button class="header-btn" onclick="showScreen('screenHome')">←</button>
+    <h1>設定</h1>
+  </div>
+  <div class="settings-section">
+    <h3>OpenAI API</h3>
+    <div class="field">
+      <label>APIキー</label>
+      <input type="password" id="settingOpenaiKey" placeholder="sk-...">
+      <div class="hint">GPT-4 Vision で画像を解析するために必要です。ブラウザ内にのみ保存されます。</div>
+    </div>
+    <div class="field">
+      <label>モデル</label>
+      <select id="settingModel">
+        <option value="gpt-4o">gpt-4o（推奨）</option>
+        <option value="gpt-4o-mini">gpt-4o-mini（安価）</option>
+        <option value="gpt-4-turbo">gpt-4-turbo</option>
+      </select>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>Google Calendar API</h3>
+    <div class="field">
+      <label>クライアントID</label>
+      <input type="text" id="settingGoogleClientId" placeholder="xxxx.apps.googleusercontent.com">
+      <div class="hint">Google Cloud Console で取得した OAuth 2.0 クライアントID</div>
+    </div>
+  </div>
+  <button class="save-btn" onclick="saveSettings()">設定を保存</button>
+</div>
+
+<!-- ===== HISTORY ===== -->
+<div id="screenHistory" class="screen">
+  <div class="header">
+    <button class="header-btn" onclick="showScreen('screenHome')">←</button>
+    <h1>読み取り履歴</h1>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div id="toast" class="toast"></div>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google API Client -->
+<script src="https://apis.google.com/js/api.js" async defer></script>
+
+<script>
+// ─── State ───
+let gTokenClient = null;
+let gAccessToken = null;
+let gUserInfo = null;
+let currentItems = [];
+let calendarList = [];
+
+// ─── Screen Navigation ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screenHistory') renderHistory();
+}
+
+// ─── Toast ───
+function toast(msg, ms = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ─── Settings ───
+function loadSettings() {
+  const k = localStorage.getItem('ptc_openai_key') || '';
+  const m = localStorage.getItem('ptc_model') || 'gpt-4o';
+  const g = localStorage.getItem('ptc_google_client_id') || '';
+  document.getElementById('settingOpenaiKey').value = k;
+  document.getElementById('settingModel').value = m;
+  document.getElementById('settingGoogleClientId').value = g;
+  return { openaiKey: k, model: m, googleClientId: g };
+}
+
+function saveSettings() {
+  localStorage.setItem('ptc_openai_key', document.getElementById('settingOpenaiKey').value.trim());
+  localStorage.setItem('ptc_model', document.getElementById('settingModel').value);
+  localStorage.setItem('ptc_google_client_id', document.getElementById('settingGoogleClientId').value.trim());
+  toast('設定を保存しました');
+  initGoogleAuth();
+  showScreen('screenHome');
+}
+
+function getSettings() {
+  return {
+    openaiKey: localStorage.getItem('ptc_openai_key') || '',
+    model: localStorage.getItem('ptc_model') || 'gpt-4o',
+    googleClientId: localStorage.getItem('ptc_google_client_id') || '',
+  };
+}
+
+// ─── Google Auth ───
+function initGoogleAuth() {
+  const { googleClientId } = getSettings();
+  if (!googleClientId) return;
+
+  gTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: googleClientId,
+    scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.profile',
+    callback: (resp) => {
+      if (resp.error) {
+        toast('Google認証に失敗しました: ' + resp.error);
+        return;
+      }
+      gAccessToken = resp.access_token;
+      fetchUserInfo();
+      fetchCalendarList();
+      toast('Googleにログインしました');
+    },
+  });
+}
+
+function handleGoogleSignIn() {
+  const { googleClientId } = getSettings();
+  if (!googleClientId) {
+    toast('先に設定画面でGoogle クライアントIDを入力してください');
+    showScreen('screenSettings');
+    return;
+  }
+  if (!gTokenClient) initGoogleAuth();
+  if (gTokenClient) {
+    gTokenClient.requestAccessToken();
+  }
+}
+
+function handleSignOut() {
+  if (gAccessToken) {
+    google.accounts.oauth2.revoke(gAccessToken);
+  }
+  gAccessToken = null;
+  gUserInfo = null;
+  updateUserBadge();
+  toast('ログアウトしました');
+}
+
+async function fetchUserInfo() {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: 'Bearer ' + gAccessToken }
+    });
+    gUserInfo = await res.json();
+    updateUserBadge();
+  } catch (e) { console.error(e); }
+}
+
+function updateUserBadge() {
+  const badge = document.getElementById('userBadge');
+  const btn = document.getElementById('btnGoogleSignIn');
+  if (gUserInfo && gAccessToken) {
+    badge.style.display = 'inline-flex';
+    document.getElementById('userAvatar').src = gUserInfo.picture || '';
+    document.getElementById('userName').textContent = gUserInfo.name || gUserInfo.email || '';
+    document.getElementById('signInLabel').textContent = 'Googleログイン済み';
+    document.getElementById('signInDesc').textContent = gUserInfo.email || '';
+  } else {
+    badge.style.display = 'none';
+    document.getElementById('signInLabel').textContent = 'Googleアカウントでログイン';
+    document.getElementById('signInDesc').textContent = 'カレンダーへの追加に必要です';
+  }
+}
+
+async function fetchCalendarList() {
+  if (!gAccessToken) return;
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: { Authorization: 'Bearer ' + gAccessToken }
+    });
+    const data = await res.json();
+    calendarList = (data.items || []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer');
+    renderCalendarPicker();
+  } catch (e) { console.error(e); }
+}
+
+function renderCalendarPicker() {
+  const sel = document.getElementById('calendarSelect');
+  sel.innerHTML = '';
+  calendarList.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.summary + (c.primary ? ' (メイン)' : '');
+    if (c.primary) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ─── Camera ───
+function triggerCamera() {
+  const { openaiKey } = getSettings();
+  if (!openaiKey) {
+    toast('先に設定画面でOpenAI APIキーを入力してください');
+    showScreen('screenSettings');
+    return;
+  }
+  document.getElementById('cameraInput').click();
+}
+
+async function handleImageSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const base64 = await fileToBase64(file);
+  document.getElementById('previewImg').src = base64;
+  document.getElementById('overlayAnalyzing').classList.add('active');
+
+  try {
+    const result = await analyzeImage(base64);
+    currentItems = result.items || [];
+    renderResults(result);
+    showScreen('screenResults');
+    if (gAccessToken && calendarList.length === 0) fetchCalendarList();
+  } catch (err) {
+    toast('解析に失敗しました: ' + err.message, 5000);
+  } finally {
+    document.getElementById('overlayAnalyzing').classList.remove('active');
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── AI Analysis ───
+async function analyzeImage(base64DataUrl) {
+  const { openaiKey, model } = getSettings();
+  const base64 = base64DataUrl.split(',')[1];
+  const mimeType = base64DataUrl.split(';')[0].split(':')[1];
+
+  const systemPrompt = `あなたは紙に書かれた内容を読み取り、TODO項目やスケジュールを抽出するアシスタントです。
+
+画像の内容を分析し、以下のJSON形式のみで返してください（それ以外のテキストは不要）:
+{
+  "items": [
+    {
+      "title": "タスク名（簡潔に）",
+      "date": "YYYY-MM-DD（不明ならnull）",
+      "time": "HH:MM（不明ならnull）",
+      "duration_minutes": 60,
+      "description": "詳細・補足",
+      "priority": "high / medium / low",
+      "should_add": true,
+      "reason": "追加すべき理由、または追加不要の理由"
+    }
+  ],
+  "summary": "紙に書かれている内容の要約（1-2文）"
+}
+
+判断基準:
+- 期日・締切があるもの → should_add: true
+- アクション（やること）が明確なもの → should_add: true
+- 会議・打ち合わせ・予定 → should_add: true
+- メモ書き・参考情報・落書き → should_add: false
+- 日付が書かれていなくても、タスクとして成立するなら should_add: true（dateはnull）
+
+今日の日付: ${new Date().toISOString().split('T')[0]}
+年が書かれていない場合は今年（${new Date().getFullYear()}年）として解釈してください。`;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + openaiKey,
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'この紙の内容を読み取って、TODO・スケジュールを抽出してください。' },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } }
+          ]
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.1,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  const content = data.choices[0].message.content;
+
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('AIからのレスポンスをパースできませんでした');
+  return JSON.parse(jsonMatch[0]);
+}
+
+// ─── Render Results ───
+function renderResults(result) {
+  const summary = document.getElementById('resultsSummary');
+  summary.innerHTML = `
+    <h3>📝 読み取り結果</h3>
+    <p>${escapeHtml(result.summary || '')}</p>
+  `;
+
+  const container = document.getElementById('resultsItems');
+  container.innerHTML = '';
+
+  currentItems.forEach((item, i) => {
+    item._checked = item.should_add;
+    const card = document.createElement('div');
+    card.className = 'item-card' + (item.should_add ? '' : ' excluded');
+    card.id = 'item-' + i;
+    card.innerHTML = `
+      <div class="item-top">
+        <div class="item-check ${item.should_add ? 'checked' : ''}" onclick="toggleItem(${i})">✓</div>
+        <div class="item-title">${escapeHtml(item.title)}</div>
+      </div>
+      <div class="item-meta">
+        ${item.date ? `<span class="badge badge-date">📅 ${item.date}${item.time ? ' ' + item.time : ''}</span>` : '<span class="badge badge-date">📅 日付なし</span>'}
+        <span class="badge badge-${item.priority}">${{high:'🔴 高',medium:'🟡 中',low:'🟢 低'}[item.priority] || '中'}</span>
+      </div>
+      ${item.description ? `<div class="item-desc">${escapeHtml(item.description)}</div>` : ''}
+      <div class="item-reason">${item.should_add ? '✅' : '⏭️'} ${escapeHtml(item.reason || '')}</div>
+      <div class="item-edit-row">
+        <input type="text" value="${escapeAttr(item.title)}" onchange="currentItems[${i}].title=this.value" placeholder="タイトル">
+        <input type="date" value="${item.date || ''}" onchange="currentItems[${i}].date=this.value">
+        <input type="time" value="${item.time || ''}" onchange="currentItems[${i}].time=this.value">
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  updateAddButton();
+}
+
+function toggleItem(i) {
+  currentItems[i]._checked = !currentItems[i]._checked;
+  const card = document.getElementById('item-' + i);
+  const check = card.querySelector('.item-check');
+  check.classList.toggle('checked');
+  card.classList.toggle('excluded');
+  updateAddButton();
+}
+
+function updateAddButton() {
+  const count = currentItems.filter(it => it._checked).length;
+  const btn = document.getElementById('btnAddToCalendar');
+  btn.textContent = count > 0 ? `${count}件をカレンダーに追加` : 'カレンダーに追加';
+  btn.disabled = count === 0;
+}
+
+// ─── Add to Google Calendar ───
+async function addToCalendar() {
+  if (!gAccessToken) {
+    toast('先にGoogleアカウントでログインしてください');
+    handleGoogleSignIn();
+    return;
+  }
+
+  const calendarId = document.getElementById('calendarSelect').value || 'primary';
+  const selected = currentItems.filter(it => it._checked);
+  if (selected.length === 0) return;
+
+  const btn = document.getElementById('btnAddToCalendar');
+  btn.disabled = true;
+  btn.textContent = '追加中...';
+
+  const colorMap = { high: '11', medium: '5', low: '2' };
+
+  let successCount = 0;
+  for (const item of selected) {
+    try {
+      const event = buildCalendarEvent(item, colorMap);
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + gAccessToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
+      if (res.ok) successCount++;
+      else console.error('Calendar API error:', await res.text());
+    } catch (e) {
+      console.error('Failed to add event:', e);
+    }
+  }
+
+  saveHistory(selected);
+
+  document.getElementById('successMsg').textContent =
+    `${successCount}件のイベントをGoogleカレンダーに追加しました`;
+  showScreen('screenSuccess');
+}
+
+function buildCalendarEvent(item, colorMap) {
+  const event = {
+    summary: item.title,
+    description: item.description || '',
+    colorId: colorMap[item.priority] || '0',
+  };
+
+  if (item.date && item.time) {
+    const dtStart = `${item.date}T${item.time}:00`;
+    const dur = item.duration_minutes || 60;
+    const startDate = new Date(dtStart);
+    const endDate = new Date(startDate.getTime() + dur * 60000);
+    event.start = {
+      dateTime: startDate.toISOString(),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    event.end = {
+      dateTime: endDate.toISOString(),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+  } else if (item.date) {
+    event.start = { date: item.date };
+    const next = new Date(item.date);
+    next.setDate(next.getDate() + 1);
+    event.end = { date: next.toISOString().split('T')[0] };
+  } else {
+    const today = new Date().toISOString().split('T')[0];
+    event.start = { date: today };
+    const next = new Date(today);
+    next.setDate(next.getDate() + 1);
+    event.end = { date: next.toISOString().split('T')[0] };
+  }
+
+  return event;
+}
+
+// ─── History ───
+function saveHistory(items) {
+  const history = JSON.parse(localStorage.getItem('ptc_history') || '[]');
+  history.unshift({
+    date: new Date().toISOString(),
+    count: items.length,
+    summary: items.map(i => i.title).join(', '),
+  });
+  if (history.length > 20) history.length = 20;
+  localStorage.setItem('ptc_history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const container = document.getElementById('historyList');
+  const history = JSON.parse(localStorage.getItem('ptc_history') || '[]');
+  if (history.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>まだ読み取り履歴がありません</p></div>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div class="date">${new Date(h.date).toLocaleString('ja-JP')}</div>
+      <div class="summary">${escapeHtml(h.summary)}</div>
+      <div class="count">${h.count}件を登録</div>
+    </div>
+  `).join('');
+}
+
+// ─── Utilities ───
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function escapeAttr(s) {
+  return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+// ─── Init ───
+window.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+  const waitForGsi = setInterval(() => {
+    if (typeof google !== 'undefined' && google.accounts) {
+      clearInterval(waitForGsi);
+      initGoogleAuth();
+    }
+  }, 200);
+});
+</script>
+</body>
+</html>
