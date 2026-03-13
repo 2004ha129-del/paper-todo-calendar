@@ -214,9 +214,10 @@ input,select,textarea{font-family:inherit;font-size:15px}
 /* ───── Toast ───── */
 .toast{
   position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-  background:#323232;color:#fff;padding:10px 20px;border-radius:8px;
+  background:#323232;color:#fff;padding:12px 20px;border-radius:8px;
   font-size:14px;z-index:400;opacity:0;transition:opacity .3s;
-  pointer-events:none;white-space:nowrap;
+  pointer-events:none;max-width:90vw;word-break:break-word;
+  text-align:center;line-height:1.4;
 }
 .toast.show{opacity:1}
 
@@ -611,7 +612,13 @@ async function analyzeImage(base64DataUrl) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error ${res.status}`);
+    const msg = err.error?.message || '';
+    if (res.status === 401) throw new Error('APIキーが無効です。設定画面で正しいキーを入力してください。');
+    if (res.status === 429) throw new Error('API利用上限に達しました。しばらく待ってから再試行してください。');
+    if (msg.includes('billing') || msg.includes('quota') || msg.includes('insufficient'))
+      throw new Error('OpenAI APIの課金設定が必要です。platform.openai.com/account/billing でクレジットを追加してください。');
+    if (msg.includes('model')) throw new Error('選択したモデルにアクセスできません。設定画面でモデルを変更してください。');
+    throw new Error(`APIエラー (${res.status}): ${msg || '不明なエラー'}`);
   }
 
   const data = await res.json();
