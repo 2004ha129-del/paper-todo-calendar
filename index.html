@@ -224,6 +224,9 @@ textarea{resize:vertical}
 .detail-item{background:var(--surface);margin:8px 16px;padding:12px;border-radius:var(--radius);border:1px solid var(--border)}
 .detail-item h4{font-size:14px;margin-bottom:4px}
 .detail-item p{font-size:13px;color:var(--text2)}
+
+.action-card.annual-active{background:#e8f0fe;border-color:var(--primary)}
+@media(prefers-color-scheme:dark){.action-card.annual-active{background:#1a3a5c}}
 </style>
 </head>
 <body>
@@ -249,6 +252,10 @@ textarea{resize:vertical}
     <button class="action-card" onclick="triggerCamera()">
       <div class="icon">📸</div>
       <div><div class="label">カメラで撮影</div><div class="desc">紙を撮影してAIが内容を解析</div></div>
+    </button>
+    <button class="action-card" id="btnAnnualMode" onclick="toggleAnnualMode()">
+      <div class="icon" id="annualModeIcon">📅</div>
+      <div><div class="label" id="annualModeLabel">通常モード</div><div class="desc" id="annualModeDesc">タップで年間スケジュールモードに切替</div></div>
     </button>
     <button class="action-card" id="btnGoogleSignIn" onclick="handleGoogleSignIn()">
       <div class="icon">🔑</div>
@@ -364,6 +371,7 @@ let currentItems = [];
 let currentPhotoBase64 = null;
 let currentSummary = '';
 let calendarList = [];
+let annualMode = false;
 
 // ─── IndexedDB ───
 const DB_NAME = 'PaperCalDB';
@@ -581,13 +589,25 @@ function fileToBase64(file) {
   });
 }
 
+// ─── Annual Mode Toggle ───
+function toggleAnnualMode() {
+  annualMode = !annualMode;
+  document.getElementById('annualModeIcon').textContent = annualMode ? '🗓️' : '📅';
+  document.getElementById('annualModeLabel').textContent = annualMode ? '年間スケジュールモード' : '通常モード';
+  document.getElementById('annualModeDesc').textContent = annualMode
+    ? '年間カレンダー・行事表に対応中 — タップで切替'
+    : 'タップで年間スケジュールモードに切替';
+  document.getElementById('btnAnnualMode').classList.toggle('annual-active', annualMode);
+  toast(annualMode ? '🗓️ 年間スケジュールモードON' : '通常モードに戻しました');
+}
+
 // ─── AI Analysis ───
 async function analyzeImage(base64DataUrl) {
   const { openaiKey, model } = getSettings();
   const base64 = base64DataUrl.split(',')[1];
   const mimeType = base64DataUrl.split(';')[0].split(':')[1];
 
-  const systemPrompt = `あなたは紙に書かれた内容を読み取り、TODO項目やスケジュールを抽出するアシスタントです。
+  const basePrompt = `あなたは紙に書かれた内容を読み取り、TODO項目やスケジュールを抽出するアシスタントです。
 
 画像の内容を分析し、以下のJSON形式のみで返してください（それ以外のテキストは不要）:
 {
@@ -629,6 +649,36 @@ async function analyzeImage(base64DataUrl) {
 今日の日付: ${new Date().toISOString().split('T')[0]}
 年が書かれていない場合は今年（${new Date().getFullYear()}年）として解釈してください。`;
 
+  const annualExtra = `
+
+【年間スケジュール読み取りの追加ルール】
+このモードでは、月別行事表・年間カレンダー・年度スケジュール表を読み取ります。
+
+年度・年の読み取り:
+- 「2026年度」「令和8年度」などの記載があればその年（または翌年4月〜3月）を基準にする
+- 「〇〇年度」は4月始まりの場合、4〜12月はその年、1〜3月は翌年として解釈する
+- 年の記載がなければ今年（${new Date().getFullYear()}年）を使う
+
+月・日付の読み取り:
+- 表形式（4月・5月・…・3月 の列や行）を読み取り、各セルの内容を個別のitemsとして抽出する
+- 「4/15」「4月15日」「4.15」はすべて同じ日付として解釈する
+- 「〇月上旬」→ その月の5日、「〇月中旬」→ 15日、「〇月末」→ 月末日を代入する
+- 月だけ分かって日が不明な場合 → 「YYYY-MM-01」として date に入れ、notes に「日付要確認」と追記
+- 「毎月第1月曜」などは recurrence: "monthly" + description に詳細を記載
+
+行事・イベントの抽出:
+- 祝日・行事名（入学式、健康診断、決算など）もすべて抽出する（should_add: true）
+- 表内の小さな文字や欄外の注記も見落とさず読み取る
+- セルに複数の行事が書かれている場合は、1行事 = 1 item として分割する
+- 太字・丸囲み・強調されている項目は priority: "high" にする
+
+件数の上限なし: 年間スケジュールは30〜60件になることがあります。すべての行事を漏れなく抽出してください。`;
+
+  const systemPrompt = annualMode ? basePrompt + annualExtra : basePrompt;
+  const userText = annualMode
+    ? 'この年間スケジュール表を読み取って、すべての行事・予定をすべて抽出してください。月別の表や欄外の注記も含めて漏れなく。'
+    : 'この紙の内容を読み取って、TODO・スケジュールを抽出してください。';
+
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + openaiKey },
@@ -637,11 +687,11 @@ async function analyzeImage(base64DataUrl) {
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: [
-          { type: 'text', text: 'この紙の内容を読み取って、TODO・スケジュールを抽出してください。' },
+          { type: 'text', text: userText },
           { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } }
         ]}
       ],
-      max_tokens: 3000,
+      max_tokens: annualMode ? 8000 : 3000,
       temperature: 0.1,
     }),
   });
@@ -666,9 +716,14 @@ async function analyzeImage(base64DataUrl) {
 
 // ─── Render Results ───
 function renderResults(result) {
+  const total = (result.items || []).length;
+  const months = new Set((result.items || []).filter(it => it.date).map(it => it.date.substring(0, 7)));
+  const isAnnual = annualMode || months.size >= 3;
+
   document.getElementById('resultsSummary').innerHTML = `
-    <h3>📝 読み取り結果</h3>
+    <h3>${isAnnual ? '🗓️' : '📝'} 読み取り結果</h3>
     <p>${esc(result.summary || '')}</p>
+    ${isAnnual ? `<p style="font-size:13px;color:var(--primary);margin-top:4px;font-weight:600">${months.size}ヶ月 / ${total}件のイベントを検出</p>` : ''}
   `;
   const container = document.getElementById('resultsItems');
   container.innerHTML = '';
@@ -676,13 +731,49 @@ function renderResults(result) {
   currentItems.forEach((item, i) => {
     item._checked = item.should_add;
     item.recurrence = item.recurrence || 'none';
-    const card = document.createElement('div');
-    card.className = 'item-card' + (item.should_add ? '' : ' excluded');
-    card.id = 'item-' + i;
-    card.innerHTML = buildItemCardHTML(item, i);
-    container.appendChild(card);
   });
+
+  if (isAnnual) {
+    // 月別グルーピング
+    const groups = {};
+    const noDate = [];
+    currentItems.forEach((item, i) => {
+      if (item.date) {
+        const ym = item.date.substring(0, 7);
+        if (!groups[ym]) groups[ym] = [];
+        groups[ym].push(i);
+      } else {
+        noDate.push(i);
+      }
+    });
+    Object.keys(groups).sort().forEach(ym => {
+      const [y, m] = ym.split('-');
+      const header = document.createElement('div');
+      header.style.cssText = 'padding:8px 16px 4px;font-size:13px;font-weight:700;color:var(--text2);border-top:1px solid var(--border);margin-top:8px';
+      header.textContent = `${y}年 ${parseInt(m)}月`;
+      container.appendChild(header);
+      groups[ym].forEach(i => appendItemCard(container, i));
+    });
+    if (noDate.length > 0) {
+      const header = document.createElement('div');
+      header.style.cssText = 'padding:8px 16px 4px;font-size:13px;font-weight:700;color:var(--text2);border-top:1px solid var(--border);margin-top:8px';
+      header.textContent = '日付なし';
+      container.appendChild(header);
+      noDate.forEach(i => appendItemCard(container, i));
+    }
+  } else {
+    currentItems.forEach((_, i) => appendItemCard(container, i));
+  }
   updateAddButton();
+}
+
+function appendItemCard(container, i) {
+  const item = currentItems[i];
+  const card = document.createElement('div');
+  card.className = 'item-card' + (item.should_add ? '' : ' excluded');
+  card.id = 'item-' + i;
+  card.innerHTML = buildItemCardHTML(item, i);
+  container.appendChild(card);
 }
 
 function buildItemCardHTML(item, i) {
