@@ -227,6 +227,19 @@ textarea{resize:vertical}
 
 .action-card.annual-active{background:#e8f0fe;border-color:var(--primary)}
 @media(prefers-color-scheme:dark){.action-card.annual-active{background:#1a3a5c}}
+
+.child-entry{display:flex;gap:8px;align-items:center;margin-bottom:10px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.child-entry input{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px}
+.child-entry .grade-tag{font-size:12px;font-weight:700;color:var(--primary);white-space:nowrap;min-width:36px;text-align:center}
+.child-entry .remove-btn{color:var(--danger);font-size:18px;padding:0 4px;flex-shrink:0}
+.add-child-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--primary);padding:8px 0;font-weight:600}
+
+.filter-tabs{display:flex;gap:6px;padding:8px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.filter-tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);transition:all .15s}
+.filter-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+.badge-child{background:#f0e6ff;color:#7c4dff;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600}
+@media(prefers-color-scheme:dark){.badge-child{background:#2d1f4a;color:#b39ddb}}
 </style>
 </head>
 <body>
@@ -280,6 +293,7 @@ textarea{resize:vertical}
     <h1>読み取り結果</h1>
   </div>
   <div id="resultsSummary" class="results-summary"></div>
+  <div id="filterTabs" class="filter-tabs" style="display:none"></div>
   <div id="calPicker" class="cal-picker">
     <label>登録先カレンダー（複数選択可）</label>
     <div id="calendarCheckboxes" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
@@ -336,6 +350,12 @@ textarea{resize:vertical}
       <div class="hint">Google Cloud Console で取得した OAuth 2.0 クライアントID</div>
     </div>
   </div>
+  <div class="settings-section">
+    <h3>お子さんの情報（任意）</h3>
+    <div id="childrenList"></div>
+    <button class="add-child-btn" onclick="addChildEntry()">＋ お子さんを追加</button>
+    <div class="hint" style="font-size:11px;color:var(--text2);margin-top:6px">登録すると、スキャン時に学年を自動判定して関係ある行事だけを抽出します</div>
+  </div>
   <button class="save-btn" onclick="saveSettings()">設定を保存</button>
 </div>
 
@@ -372,6 +392,7 @@ let currentPhotoBase64 = null;
 let currentSummary = '';
 let calendarList = [];
 let annualMode = false;
+let activeChildFilter = 'all';
 
 // ─── IndexedDB ───
 const DB_NAME = 'PaperCalDB';
@@ -446,6 +467,7 @@ function loadSettings() {
   document.getElementById('settingOpenaiKey').value = localStorage.getItem('ptc_openai_key') || '';
   document.getElementById('settingModel').value = localStorage.getItem('ptc_model') || 'gpt-4o';
   document.getElementById('settingGoogleClientId').value = localStorage.getItem('ptc_google_client_id') || '';
+  renderChildrenList();
 }
 
 function saveSettings() {
@@ -589,6 +611,80 @@ function fileToBase64(file) {
   });
 }
 
+// ─── Children Management ───
+function calcGrade(birthdateStr) {
+  if (!birthdateStr) return null;
+  const birth = new Date(birthdateStr);
+  const today = new Date();
+  // 日本の学年: 4月1日始まり
+  const currentSchoolYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  // 4月1日生まれは前の学年コホートに入る
+  const birthMonth = birth.getMonth(); // 0-based
+  const birthDay = birth.getDate();
+  const entryYear = (birthMonth < 3 || (birthMonth === 3 && birthDay === 1))
+    ? birth.getFullYear() + 6
+    : birth.getFullYear() + 7;
+  const grade = currentSchoolYear - entryYear + 1;
+  if (grade < 1) return { label: '未就学', grade: 0, schoolType: 'preschool' };
+  if (grade <= 6) return { label: `小${grade}`, grade, schoolType: 'elementary' };
+  if (grade <= 9) return { label: `中${grade - 6}`, grade: grade - 6, schoolType: 'junior' };
+  if (grade <= 12) return { label: `高${grade - 9}`, grade: grade - 9, schoolType: 'high' };
+  return { label: '卒業', grade: 0, schoolType: 'graduated' };
+}
+
+function getChildren() {
+  try { return JSON.parse(localStorage.getItem('ptc_children') || '[]'); } catch { return []; }
+}
+
+function saveChildrenData(arr) {
+  localStorage.setItem('ptc_children', JSON.stringify(arr));
+}
+
+function renderChildrenList() {
+  const children = getChildren();
+  const container = document.getElementById('childrenList');
+  container.innerHTML = '';
+  children.forEach((child, i) => {
+    const gradeInfo = calcGrade(child.birthdate);
+    const gradeTag = gradeInfo ? gradeInfo.label : '?';
+    const entry = document.createElement('div');
+    entry.className = 'child-entry';
+    entry.innerHTML = `
+      <input type="text" placeholder="名前" value="${escA(child.name)}" oninput="updateChild(${i},'name',this.value)">
+      <input type="date" value="${child.birthdate||''}" oninput="updateChild(${i},'birthdate',this.value)" style="max-width:140px">
+      <span class="grade-tag">${gradeTag}</span>
+      <button class="remove-btn" onclick="removeChild(${i})">✕</button>
+    `;
+    container.appendChild(entry);
+  });
+}
+
+function addChildEntry() {
+  const children = getChildren();
+  children.push({ name: '', birthdate: '' });
+  saveChildrenData(children);
+  renderChildrenList();
+}
+
+function updateChild(i, field, value) {
+  const children = getChildren();
+  children[i][field] = value;
+  saveChildrenData(children);
+  // 生年月日が変わったら学年タグを即時更新
+  if (field === 'birthdate') {
+    const gradeInfo = calcGrade(value);
+    const entries = document.querySelectorAll('.child-entry');
+    if (entries[i]) entries[i].querySelector('.grade-tag').textContent = gradeInfo ? gradeInfo.label : '?';
+  }
+}
+
+function removeChild(i) {
+  const children = getChildren();
+  children.splice(i, 1);
+  saveChildrenData(children);
+  renderChildrenList();
+}
+
 // ─── Annual Mode Toggle ───
 function toggleAnnualMode() {
   annualMode = !annualMode;
@@ -607,6 +703,16 @@ async function analyzeImage(base64DataUrl) {
   const base64 = base64DataUrl.split(',')[1];
   const mimeType = base64DataUrl.split(';')[0].split(':')[1];
 
+  // 子供情報をプロンプト用に構築
+  const children = getChildren().filter(c => c.name && c.birthdate);
+  const childrenPromptSection = children.length > 0 ? (() => {
+    const lines = children.map(c => {
+      const g = calcGrade(c.birthdate);
+      return `- ${c.name}（${g ? g.label : '?'}）`;
+    }).join('\n');
+    return `\n\n【登録されているお子さん】\n${lines}\n\n子供の照合ルール:\n- 行事・イベントが特定の学年・学校種別向けと判断できる場合、該当する子供の名前を "child" フィールドに入れる\n- 複数の子供が対象の場合は "child": "全員" とする\n- 学年の記載がなく全員対象と思われる場合も "child": "全員"\n- 誰にも該当しない学年向けの行事は "should_add": false にする\n- 「保護者」「父母」「親」向けの行事は "child": "保護者" として "should_add": true にする`;
+  })() : '';
+
   const basePrompt = `あなたは紙に書かれた内容を読み取り、TODO項目やスケジュールを抽出するアシスタントです。
 
 画像の内容を分析し、以下のJSON形式のみで返してください（それ以外のテキストは不要）:
@@ -624,12 +730,13 @@ async function analyzeImage(base64DataUrl) {
       "description": "その他の詳細",
       "priority": "high / medium / low",
       "recurrence": "none / daily / weekly / monthly / yearly",
+      "child": "対象の子供の名前（登録なし・全員対象はnull）",
       "should_add": true,
       "reason": "追加すべき理由、または追加不要の理由"
     }
   ],
   "summary": "紙に書かれている内容の要約（1-2文）"
-}
+}${childrenPromptSection}
 
 判断基準:
 - 期日・締切があるもの → should_add: true
@@ -714,8 +821,72 @@ async function analyzeImage(base64DataUrl) {
   return JSON.parse(jsonMatch[0]);
 }
 
+// ─── Filter Tabs ───
+function renderFilterTabs() {
+  const children = getChildren().filter(c => c.name);
+  const tabsEl = document.getElementById('filterTabs');
+  // 実際に抽出されたchild値
+  const childValues = [...new Set(currentItems.map(it => it.child).filter(Boolean))];
+  if (children.length === 0 || childValues.length === 0) { tabsEl.style.display = 'none'; return; }
+  tabsEl.style.display = 'flex';
+  const tabs = ['all', ...childValues.filter(v => v !== '全員' && v !== '保護者'), '全員', '保護者'].filter((v, i, a) => childValues.includes(v) || v === 'all' ? a.indexOf(v) === i : false);
+  tabsEl.innerHTML = tabs.map(t => `
+    <button class="filter-tab ${activeChildFilter === t ? 'active' : ''}" onclick="setChildFilter('${t}')">
+      ${t === 'all' ? '全て' : t}
+    </button>
+  `).join('');
+}
+
+function setChildFilter(val) {
+  activeChildFilter = val;
+  renderFilterTabs();
+  rerenderItems();
+}
+
+function rerenderItems() {
+  const total = currentItems.length;
+  const months = new Set(currentItems.filter(it => it.date).map(it => it.date.substring(0, 7)));
+  const isAnnual = annualMode || months.size >= 3;
+  const container = document.getElementById('resultsItems');
+  container.innerHTML = '';
+  const filtered = currentItems.map((item, i) => ({ item, i })).filter(({ item }) => {
+    if (activeChildFilter === 'all') return true;
+    if (!item.child) return activeChildFilter === 'all';
+    return item.child === activeChildFilter || item.child === '全員';
+  });
+  if (isAnnual) {
+    const groups = {}, noDate = [];
+    filtered.forEach(({ item, i }) => {
+      if (item.date) {
+        const ym = item.date.substring(0, 7);
+        if (!groups[ym]) groups[ym] = [];
+        groups[ym].push(i);
+      } else { noDate.push(i); }
+    });
+    Object.keys(groups).sort().forEach(ym => {
+      const [y, m] = ym.split('-');
+      const header = document.createElement('div');
+      header.style.cssText = 'padding:8px 16px 4px;font-size:13px;font-weight:700;color:var(--text2);border-top:1px solid var(--border);margin-top:8px';
+      header.textContent = `${y}年 ${parseInt(m)}月`;
+      container.appendChild(header);
+      groups[ym].forEach(i => appendItemCard(container, i));
+    });
+    if (noDate.length > 0) {
+      const header = document.createElement('div');
+      header.style.cssText = 'padding:8px 16px 4px;font-size:13px;font-weight:700;color:var(--text2);border-top:1px solid var(--border);margin-top:8px';
+      header.textContent = '日付なし';
+      container.appendChild(header);
+      noDate.forEach(i => appendItemCard(container, i));
+    }
+  } else {
+    filtered.forEach(({ i }) => appendItemCard(container, i));
+  }
+  updateAddButton();
+}
+
 // ─── Render Results ───
 function renderResults(result) {
+  activeChildFilter = 'all';
   const total = (result.items || []).length;
   const months = new Set((result.items || []).filter(it => it.date).map(it => it.date.substring(0, 7)));
   const isAnnual = annualMode || months.size >= 3;
@@ -732,6 +903,8 @@ function renderResults(result) {
     item._checked = item.should_add;
     item.recurrence = item.recurrence || 'none';
   });
+
+  renderFilterTabs();
 
   if (isAnnual) {
     // 月別グルーピング
@@ -790,6 +963,7 @@ function buildItemCardHTML(item, i) {
       ${item.date ? `<span class="badge badge-date">📅 ${item.date} ${timeStr}</span>` : '<span class="badge badge-date">📅 日付なし</span>'}
       <span class="badge badge-${item.priority}">${priorityLabels[item.priority] || '🟡 中'}</span>
       ${item.recurrence && item.recurrence !== 'none' ? `<span class="badge badge-date">🔁 ${recLabels[item.recurrence]}</span>` : ''}
+      ${item.child ? `<span class="badge badge-child">👤 ${esc(item.child)}</span>` : ''}
     </div>
     ${item.location ? `<div style="font-size:13px;margin:4px 0 0 32px">📍 ${esc(item.location)}</div>` : ''}
     ${item.dress_code ? `<div style="font-size:13px;margin:2px 0 0 32px">👔 ${esc(item.dress_code)}</div>` : ''}
